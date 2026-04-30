@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dayflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<!-- ═══ AUTH ═══ -->
+<div id="authScreen">
+  <div class="auth-wrap">
+    <div class="auth-logo">Dayflow</div>
+    <div class="auth-tagline">your daily operating system</div>
+    <div class="auth-card">
+      <div class="tab-row" id="authTabs">
+        <button class="tab active" data-tab="login" onclick="switchAuth('login')">Sign in</button>
+        <button class="tab" data-tab="register" onclick="switchAuth('register')">Create account</button>
+      </div>
+      <div id="authNameRow" class="field" style="display:none">
+        <label>Name</label>
+        <input type="text" id="authName" placeholder="Your name" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <p class="auth-error" id="authError"></p>
+      <button class="btn-primary w-full" id="authSubmit" onclick="doAuth()">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" style="display:none">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <span class="brand">Dayflow</span>
+    <nav class="top-nav" id="topNav">
+      <button class="nav-item active" data-page="schedule" onclick="goPage('schedule',this)">📅 Schedule</button>
+      <button class="nav-item" data-page="notes"    onclick="goPage('notes',this)">📝 Notes</button>
+      <button class="nav-item" data-page="timer"    onclick="goPage('timer',this)">⏱ Timers</button>
+      <button class="nav-item" data-page="files"    onclick="goPage('files',this)">📁 Files</button>
+      <button class="nav-item" data-page="settings" onclick="goPage('settings',this)">⚙️ Settings</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="session-pill" id="sessionPill">
+        <span class="session-dot" id="sessionDot"></span>
+        <span id="sessionClock" class="mono">--:--:--</span>
+      </div>
+      <!-- Quick Launch Button -->
+      <div class="ql-wrap">
+        <button class="ql-btn" id="qlBtn" onclick="toggleQL()" title="Quick Launch">⚡</button>
+        <div class="ql-panel" id="qlPanel" style="display:none">
+          <div class="ql-header">Quick Launch</div>
+          <div id="qlLinks"></div>
+          <button class="ql-add" onclick="goPage('settings',document.querySelector('[data-page=settings]'));closeQL();setTimeout(()=>document.getElementById('qlSettingsSection').scrollIntoView({behavior:'smooth'}),200)">+ Manage links</button>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">◑</button>
+      <div class="user-chip" onclick="logout()">
+        <div class="avatar" id="userAvatar">?</div>
+        <span id="userName"></span>
+        <span class="text-muted">↩</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ══════ SCHEDULE ══════ -->
+    <section class="page active" id="page-schedule">
+
+      <!-- Session bar -->
+      <div class="session-bar">
+        <div class="sstat"><span class="sstat-label">Date</span><span class="sstat-val mono" id="sDate">—</span></div>
+        <div class="sdiv"></div>
+        <div class="sstat"><span class="sstat-label">Started</span><span class="sstat-val mono" id="sStart">—</span></div>
+        <div class="sdiv"></div>
+        <div class="sstat"><span class="sstat-label">Elapsed</span><span class="sstat-val mono" id="sElapsed">00:00:00</span></div>
+        <div class="sdiv"></div>
+        <div class="sstat"><span class="sstat-label">Events</span><span class="sstat-val mono" id="sEvents">0</span></div>
+        <div class="flex-1"></div>
+        <button class="btn-accent btn-sm" id="btnStartDay" onclick="startDay()">▶ Start day</button>
+        <button class="btn-ghost btn-sm" id="btnLogEvent" onclick="logEvent()" style="display:none">+ Log event</button>
+        <button class="btn-danger btn-sm" id="btnEndDay" onclick="endDay()" style="display:none">⏹ End day</button>
+      </div>
+
+      <div class="two-col">
+        <!-- Add task -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Add task</span>
+            <div class="flex gap-6">
+              <button class="btn-ghost btn-xs" onclick="loadBuiltin()">📋 My schedule</button>
+              <button class="btn-ghost btn-xs" onclick="loadDefault()">↩ Default</button>
+              <button class="btn-ghost btn-xs" onclick="saveDefault()">💾 Save default</button>
+            </div>
+          </div>
+          <div class="field"><label>Task name</label><input type="text" id="tName" placeholder="e.g. Deep work block"></div>
+          <div class="two-col-sm">
+            <div class="field"><label>Time</label><input type="time" id="tTime" value="09:00"></div>
+            <div class="field"><label>Duration</label><input type="text" id="tDur" placeholder="90 min"></div>
+            <div class="field"><label>Type</label>
+              <select id="tType">
+                <option value="daily">Daily</option>
+                <option value="project">Project</option>
+                <option value="anchor">Anchor</option>
+                <option value="rest">Rest</option>
+                <option value="recharge">Recharge</option>
+              </select>
+            </div>
+            <div class="field"><label>Priority</label>
+              <select id="tPriority">
+                <option value="3">🔴 High</option>
+                <option value="2" selected>🟡 Medium</option>
+                <option value="1">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>Notes</label><input type="text" id="tNotes" placeholder="Details..."></div>
+          <div class="flex gap-8 mt-8">
+            <button class="btn-accent" onclick="addTask()">+ Add task</button>
+            <button class="btn-gcal btn-sm" onclick="exportAllGCal()">📆 All → GCal</button>
+            <button class="btn-danger btn-sm" onclick="archiveDay()">Archive day</button>
+          </div>
+        </div>
+
+        <!-- Today -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Today's schedule</span>
+            <div class="flex gap-6 align-center">
+              <label class="card-label" style="margin:0">Sort:</label>
+              <select class="input-xs" onchange="sortTasks(this.value)">
+                <option value="time">⏰ Time</option>
+                <option value="priority-desc">🔴 Priority ↑</option>
+                <option value="priority-asc">🟢 Priority ↓</option>
+                <option value="alpha">🔤 A–Z</option>
+                <option value="alpha-desc">🔤 Z–A</option>
+                <option value="newest">🆕 Newest</option>
+                <option value="oldest">🕐 Oldest</option>
+              </select>
+              <span class="sync-dot-wrap"><span class="sync-dot"></span></span>
+            </div>
+          </div>
+          <div id="taskList"><div class="empty">No tasks yet.</div></div>
+        </div>
+      </div>
+
+      <!-- Archive -->
+      <div class="card mt-16">
+        <div class="card-header"><span class="card-label">Past days</span></div>
+        <div id="archiveList"><div class="empty">No archived days.</div></div>
+      </div>
+    </section>
+
+    <!-- ══════ NOTES ══════ -->
+    <section class="page" id="page-notes">
+      <div class="sidebar-layout">
+        <div class="card sidebar-card">
+          <div class="card-label mb-10">Topics</div>
+          <div id="topicList" class="sidebar-nav"></div>
+          <div class="divider"></div>
+          <div class="flex gap-6">
+            <input type="text" id="newTopic" placeholder="New topic..." class="input-sm flex-1">
+            <button class="btn-accent btn-sm" onclick="addTopic()">+</button>
+          </div>
+        </div>
+        <div id="notesArea"><div class="empty mt-60">Select or create a topic.</div></div>
+      </div>
+    </section>
+
+    <!-- ══════ TIMERS ══════ -->
+    <section class="page" id="page-timer">
+      <div class="three-col">
+        <!-- Countdown -->
+        <div class="card">
+          <div class="card-header"><span class="card-label">Countdown</span></div>
+          <div class="time-inputs">
+            <div class="tu"><input type="number" id="cdH" min="0" max="23" value="0" onchange="cdReset()"><label>HRS</label></div>
+            <div class="tu"><input type="number" id="cdM" min="0" max="59" value="25" onchange="cdReset()"><label>MIN</label></div>
+            <div class="tu"><input type="number" id="cdS" min="0" max="59" value="0" onchange="cdReset()"><label>SEC</label></div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="cdBar" style="width:100%"></div></div>
+          <div class="timer-display" id="cdDisplay">25:00</div>
+          <div class="timer-ctrl">
+            <button class="btn-accent btn-sm" onclick="cdStart()">▶ Start</button>
+            <button class="btn-ghost btn-sm" onclick="cdPause()">⏸ Pause</button>
+            <button class="btn-ghost btn-sm" onclick="cdReset()">↺ Reset</button>
+          </div>
+        </div>
+        <!-- Stopwatch -->
+        <div class="card">
+          <div class="card-header"><span class="card-label">Stopwatch</span></div>
+          <div class="timer-display" id="swDisplay">00:00:00</div>
+          <div class="timer-ctrl">
+            <button class="btn-accent btn-sm" onclick="swStart()">▶</button>
+            <button class="btn-ghost btn-sm" onclick="swPause()">⏸</button>
+            <button class="btn-ghost btn-sm" onclick="swReset()">↺</button>
+            <button class="btn-ghost btn-sm" onclick="swLap()">🚩 Lap</button>
+          </div>
+          <div class="lap-list" id="lapList"></div>
+        </div>
+        <!-- Pomodoro -->
+        <div class="card">
+          <div class="card-header"><span class="card-label">Pomodoro</span></div>
+          <div class="time-inputs">
+            <div class="tu"><input type="number" id="pomW" min="1" max="90" value="25" onchange="pomReset()"><label>WORK (min)</label></div>
+            <div class="tu"><input type="number" id="pomB" min="1" max="30" value="5" onchange="pomReset()"><label>BREAK (min)</label></div>
+          </div>
+          <div class="pom-center"><span class="phase-badge phase-work" id="pomPhase">WORK</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="pomBar" style="width:100%"></div></div>
+          <div class="timer-display" id="pomDisplay">25:00</div>
+          <div class="timer-ctrl">
+            <button class="btn-accent btn-sm" onclick="pomStart()">▶ Start</button>
+            <button class="btn-ghost btn-sm" onclick="pomPause()">⏸</button>
+            <button class="btn-ghost btn-sm" onclick="pomReset()">↺</button>
+          </div>
+          <div class="pom-count mono" id="pomCount">Session 1</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ FILES ══════ -->
+    <section class="page" id="page-files">
+      <div class="sidebar-layout">
+        <div class="card sidebar-card">
+          <div class="card-label mb-10">Categories</div>
+          <div id="fileCatList" class="sidebar-nav"></div>
+          <div class="divider"></div>
+          <div class="flex gap-6">
+            <input type="text" id="newCat" placeholder="New category..." class="input-sm flex-1">
+            <button class="btn-accent btn-sm" onclick="addFileCat()">+</button>
+          </div>
+        </div>
+        <div>
+          <!-- Search -->
+          <div class="card mb-12">
+            <input type="text" id="fileSearch" placeholder="🔍  Search files..." oninput="renderFiles()" style="border:none;background:none;outline:none;width:100%;font-size:0.9rem;color:var(--text)">
+          </div>
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size:2rem;margin-bottom:6px">📂</div>
+            <div style="font-weight:500">Drop files here or click to browse</div>
+            <div class="text-muted" style="font-size:0.76rem;margin-top:4px">Images, PDFs, documents — up to 8MB each</div>
+          </div>
+          <input type="file" id="fileInput" style="display:none" multiple onchange="handleFilePick(this)">
+          <div id="fileGrid" class="file-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════ SETTINGS ══════ -->
+    <section class="page" id="page-settings">
+      <div class="settings-layout">
+        <!-- Settings sidebar -->
+        <div class="card sidebar-card">
+          <div class="card-label mb-10">Settings</div>
+          <div class="sidebar-nav">
+            <div class="sidebar-item active" onclick="showSettingsTab('appearance',this)">🎨 Appearance</div>
+            <div class="sidebar-item" onclick="showSettingsTab('layout',this)">🧩 Layout</div>
+            <div class="sidebar-item" onclick="showSettingsTab('quicklaunch',this)" id="qlSettingsSection">⚡ Quick Launch</div>
+            <div class="sidebar-item" onclick="showSettingsTab('data',this)">💾 Data</div>
+            <div class="sidebar-item" onclick="showSettingsTab('account',this)">👤 Account</div>
+          </div>
+        </div>
+        <!-- Settings panels -->
+        <div>
+          <!-- Appearance -->
+          <div class="settings-panel active" id="stab-appearance">
+            <div class="card mb-12">
+              <div class="card-header"><span class="card-label">Theme</span></div>
+              <div class="setting-row">
+                <div><div class="setting-name">Color scheme</div><div class="setting-desc">Dark or light interface</div></div>
+                <div class="flex gap-6">
+                  <button class="btn-ghost btn-sm" onclick="setTheme('dark')">🌙 Dark</button>
+                  <button class="btn-ghost btn-sm" onclick="setTheme('light')">☀️ Light</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div><div class="setting-name">Accent color</div><div class="setting-desc">Primary highlight color</div></div>
+                <div class="flex gap-6 flex-wrap">
+                  <button class="color-swatch" style="background:#6ee7b7" onclick="setAccent('#6ee7b7','#1a3d30')"></button>
+                  <button class="color-swatch" style="background:#60a5fa" onclick="setAccent('#60a5fa','#1a2d3d')"></button>
+                  <button class="color-swatch" style="background:#f472b6" onclick="setAccent('#f472b6','#3d1a2d')"></button>
+                  <button class="color-swatch" style="background:#fb923c" onclick="setAccent('#fb923c','#3d2010')"></button>
+                  <button class="color-swatch" style="background:#a78bfa" onclick="setAccent('#a78bfa','#2a1a3d')"></button>
+                  <button class="color-swatch" style="background:#facc15" onclick="setAccent('#facc15','#3d3010')"></button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div><div class="setting-name">Font scale</div><div class="setting-desc">Adjust text size</div></div>
+                <div class="flex gap-6">
+                  <button class="btn-ghost btn-sm" onclick="setFontScale(0.9)">S</button>
+                  <button class="btn-ghost btn-sm" onclick="setFontScale(1)">M</button>
+                  <button class="btn-ghost btn-sm" onclick="setFontScale(1.1)">L</button>
+                  <button class="btn-ghost btn-sm" onclick="setFontScale(1.2)">XL</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layout -->
+          <div class="settings-panel" id="stab-layout">
+            <div class="card mb-12">
+              <div class="card-header"><span class="card-label">Layout</span></div>
+              <div class="setting-row">
+                <div><div class="setting-name">Compact mode</div><div class="setting-desc">Reduce padding and spacing</div></div>
+                <label class="toggle"><input type="checkbox" id="compactToggle" onchange="toggleCompact(this.checked)"><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Launch -->
+          <div class="settings-panel" id="stab-quicklaunch">
+            <div class="card mb-12">
+              <div class="card-header"><span class="card-label">Quick Launch Links</span></div>
+              <div class="setting-desc mb-12">Links that open in new tabs from the ⚡ button in the toolbar.</div>
+              <div id="qlSettingsList"></div>
+              <div class="divider"></div>
+              <div class="flex gap-8">
+                <input type="text" id="qlNewLabel" placeholder="Label (e.g. GitHub)" class="flex-1">
+                <input type="text" id="qlNewUrl" placeholder="URL (e.g. https://github.com)" class="flex-1">
+                <button class="btn-accent btn-sm" onclick="addQLLink()">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data -->
+          <div class="settings-panel" id="stab-data">
+            <div class="card mb-12">
+              <div class="card-header"><span class="card-label">Import / Export</span></div>
+              <div class="setting-row">
+                <div><div class="setting-name">Export all data</div><div class="setting-desc">Download a JSON backup of everything</div></div>
+                <button class="btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
+              </div>
+              <div class="setting-row">
+                <div><div class="setting-name">Import data</div><div class="setting-desc">Restore from a JSON backup</div></div>
+                <button class="btn-ghost btn-sm" onclick="document.getElementById('importFile').click()">⬆ Import</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-label">Danger zone</span></div>
+              <div class="setting-row">
+                <div><div class="setting-name" style="color:var(--red)">Reset all data</div><div class="setting-desc">Permanently delete all your data</div></div>
+                <button class="btn-danger btn-sm" onclick="resetAllData()">Reset</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account -->
+          <div class="settings-panel" id="stab-account">
+            <div class="card">
+              <div class="card-header"><span class="card-label">Account</span></div>
+              <div class="setting-row">
+                <div><div class="setting-name">Signed in as</div><div class="setting-desc mono" id="settingsEmail">—</div></div>
+                <button class="btn-danger btn-sm" onclick="logout()">Sign out</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ALARM OVERLAY -->
+<div id="alarmOverlay" style="display:none">
+  <div class="alarm-box">
+    <div class="alarm-icon">🔔</div>
+    <div class="alarm-title" id="alarmTitle">Time's up!</div>
+    <div class="alarm-sub" id="alarmSub"></div>
+    <button class="btn-accent" style="padding:14px 40px;font-size:1rem" onclick="stopAlarm()">Stop alarm</button>
+  </div>
+</div>
+
+<!-- FILE PREVIEW MODAL -->
+<div id="fileModal" onclick="if(event.target===this)closeFileModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeFileModal()">✕</button>
+    <div id="filePreview"></div>
+  </div>
+</div>
+
+<!-- RENAME FILE MODAL -->
+<div id="renameModal" onclick="if(event.target===this)closeRename()">
+  <div class="modal-box" style="max-width:380px">
+    <div class="card-label mb-12">Rename file</div>
+    <input type="text" id="renameInput" placeholder="New name...">
+    <div class="flex gap-8 mt-12">
+      <button class="btn-accent" onclick="confirmRename()">Rename</button>
+      <button class="btn-ghost" onclick="closeRename()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION SUMMARY MODAL -->
+<div id="summaryModal" onclick="if(event.target===this)closeSummary()">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-title">Day complete 🎉</div>
+    <div class="mono text-muted mb-16" id="sumDateLine"></div>
+    <div id="sumStats"></div>
+    <div class="summary-events" id="sumEvents"></div>
+    <div class="flex gap-8 mt-16">
+      <button class="btn-accent" onclick="closeSummary()">Done</button>
+      <button class="btn-ghost" onclick="archiveDay();closeSummary()">Archive & clear</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="scripts/config.js"></script>
+<script src="scripts/api.js"></script>
+<script src="scripts/auth.js"></script>
+<script src="scripts/theme.js"></script>
+<script src="scripts/session.js"></script>
+<script src="scripts/schedule.js"></script>
+<script src="scripts/notes.js"></script>
+<script src="scripts/timer.js"></script>
+<script src="scripts/files.js"></script>
+<script src="scripts/settings.js"></script>
+<script src="scripts/quicklaunch.js"></script>
+<script src="scripts/app.js"></script>
+</body>
+</html>
